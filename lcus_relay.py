@@ -43,10 +43,10 @@ class Relay(object):
                         all relays in the OFF state.
         """
         # The LCUS_X2 showed this as a stable value.
-        self.timeout = 0.05  # 50 ms read timeout
+        self._timeout = 0.05  # 50 ms read timeout
         # Using write_timeout=None makes all writes blocking.
-        self.hw = serial.Serial(
-            port=port, timeout=self.timeout, write_timeout=None,
+        self._hw = serial.Serial(
+            port=port, timeout=self._timeout, write_timeout=None,
             baudrate=9600, bytesize=serial.EIGHTBITS,
             stopbits=serial.STOPBITS_ONE, parity=serial.PARITY_NONE,
             xonxoff=False, rtscts=False, dsrdtr=False)
@@ -63,6 +63,7 @@ class Relay(object):
             self._status_len += len('CH%d: OFF\r\n' % r)
         if init:
             self.off()
+        return
 
     def _send(self, relay, cmd):
         # The on/off syntax is a fixed 4 byte command:
@@ -88,7 +89,7 @@ class Relay(object):
         else:
             return False
         for r in relay:
-            self.hw.write(struct.pack('4B', 0xA0, r, cmd, 0xA0 + r + cmd))
+            self._hw.write(struct.pack('4B', 0xA0, r, cmd, 0xA0 + r + cmd))
         return True
 
     def off(self, relay=0):
@@ -124,8 +125,8 @@ class Relay(object):
         # Read status twice in a row. Testing often showed stale status after
         # a single read.
         for i in range(2):
-            self.hw.write(struct.pack('B', 0xFF))
-            buf = self.hw.read(self._status_len)
+            self._hw.write(struct.pack('B', 0xFF))
+            buf = self._hw.read(self._status_len)
         d = {}
         for line in buf.decode().split('\r\n'):
             if line:
